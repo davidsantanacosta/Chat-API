@@ -23,7 +23,7 @@ class BinTreeNodeReader
         }
         $firstByte = $this->peekInt8();
         $stanzaFlag = ($firstByte & 0xF0) >> 4; //ENCRYPTED
-      /*$isCompressed = (0x400000 & $firstByte) > 0;
+        /*$isCompressed = (0x400000 & $firstByte) > 0;
         $isEncrypted = (0x800000 & $firstByte) > 0;*/
         $stanzaSize = $this->peekInt16(1) | (($firstByte & 0x0F) << 16);
         if ($stanzaSize > strlen($this->input)) {
@@ -49,20 +49,20 @@ class BinTreeNodeReader
 
     protected function readNibble()
     {
-        $byte = $this->readInt8();
+        $byte             = $this->readInt8();
 
         $ignoreLastNibble = (bool) ($byte & 0x80);
-        $size = ($byte & 0x7f);
-        $nrOfNibbles = $size * 2 - (int) $ignoreLastNibble;
+        $size             = ($byte & 0x7f);
+        $nrOfNibbles      = $size * 2 - (int) $ignoreLastNibble;
 
-        $data = $this->fillArray($size);
-        $string = '';
+        $data             = $this->fillArray($size);
+        $string           = '';
 
         for ($i = 0; $i < $nrOfNibbles; $i++) {
-            $byte = $data[(int) floor($i / 2)];
-            $ord = ord($byte);
+            $byte    = $data[(int) floor($i / 2)];
+            $ord     = ord($byte);
 
-            $shift = 4 * (1 - $i % 2);
+            $shift   = 4 * (1 - $i % 2);
             $decimal = ($ord & (15 << $shift)) >> $shift;
 
             switch ($decimal) {
@@ -92,9 +92,10 @@ class BinTreeNodeReader
 
     protected function getToken($token)
     {
-        $ret = '';
+        $ret     = '';
         $subdict = false;
         TokenMap::GetToken($token, $subdict, $ret);
+
         if (!$ret) {
             $token = $this->readInt8();
             TokenMap::GetToken($token, $subdict, $ret);
@@ -108,8 +109,8 @@ class BinTreeNodeReader
 
     protected function getTokenDouble($n, $n2)
     {
-        $pos = $n2 + $n * 256;
-        $ret = '';
+        $pos     = $n2 + $n * 256;
+        $ret     = '';
         $subdict = true;
         TokenMap::GetToken($pos, $subdict, $ret);
         if (!$ret) {
@@ -183,12 +184,13 @@ class BinTreeNodeReader
         if (($len & 0x80) != 0 && $n == 251) {
             $remove = 1;
         }
-        $len = $len & 0x7F;
-        $text = substr($this->input, 0, $len);
+        $len         = $len & 0x7F;
+        $text        = substr($this->input, 0, $len);
         $this->input = substr($this->input, $len);
-        $data = bin2hex($text);
-        $len = strlen($data);
-        $out = '';
+        $data        = bin2hex($text);
+        $len         = strlen($data);
+        $out         = '';
+
         for ($i = 0; $i < $len; ++$i) {
             $val = ord(hex2bin('0'.$data[$i]));
             if ($i == ($len - 1) && $val > 11 && $n != 251) {
@@ -265,9 +267,9 @@ class BinTreeNodeReader
         $attributes = [];
         $attribCount = ($size - 2 + $size % 2) / 2;
         for ($i = 0; $i < $attribCount; $i++) {
-            $len1 = $this->readInt8();
-            $key = $this->readString($len1);
-            $len2 = $this->readInt8();
+            $len1  = $this->readInt8();
+            $key   = $this->readString($len1);
+            $len2  = $this->readInt8();
             $value = $this->readString($len2);
             $attributes[$key] = $value;
         }

@@ -40,43 +40,43 @@ class WhatsProt
     protected $challengeData;           //
     protected $debug;                   // Determines whether debug mode is on or off.
     protected $eventManager;            // An instance of the WhatsApiEvent Manager.
-    protected $groupList = [];     // An array with all the groups a user belongs in.
+    protected $groupList      = [];     // An array with all the groups a user belongs in.
     protected $outputKey;               // Instances of the KeyStream class.
-    protected $groupId = false;         // Id of the group created.
-    protected $lastId = false;          // Id to the last message sent.
+    protected $groupId        = false;         // Id of the group created.
+    protected $lastId         = false;          // Id to the last message sent.
     protected $loginStatus;             // Holds the login status.
-    protected $mediaFileInfo = []; // Media File Information
-    protected $mediaQueue = [];    // Queue for media message nodes
+    protected $mediaFileInfo  = []; // Media File Information
+    protected $mediaQueue     = [];    // Queue for media message nodes
     protected $messageCounter = 0;      // Message counter for auto-id.
-    protected $iqCounter = 1;
-    protected $messageQueue = [];  // Queue for received messages.
+    protected $iqCounter      = 1;
+    protected $messageQueue   = [];  // Queue for received messages.
     protected $name;                    // The user name.
-    protected $newMsgBind = false;      //
-    protected $outQueue = [];      // Queue for outgoing messages.
+    protected $newMsgBind     = false;      //
+    protected $outQueue       = [];      // Queue for outgoing messages.
     protected $password;                // The user password.
     protected $phoneNumber;             // The user phone number including the country code without '+' or '00'.
     protected $serverReceivedId;        // Confirm that the *server* has received your command.
     protected $socket;                  // A socket to connect to the WhatsApp network.
     protected $messageStore;
-    protected $nodeId = [];
+    protected $nodeId         = [];
     protected $messageId;
     protected $voice;
-    protected $timeout = 0;
+    protected $timeout        = 0;
     protected $sessionCiphers = [];
-    public $v2Jids = [];
-    public $v1Only = [];
-    protected $groupCiphers = [];
-    protected $pending_nodes = [];
+    public    $v2Jids         = [];
+    public    $v1Only         = [];
+    protected $groupCiphers   = [];
+    protected $pending_nodes  = [];
     protected $replaceKey;
-    public $retryCounters = [];
-    protected $readReceipts = true;
-    public $retryNodes = [];
+    public    $retryCounters  = [];
+    protected $readReceipts   = true;
+    public    $retryNodes     = [];
     protected $axolotlStore;
-    public $writer;                  // An instance of the BinaryTreeNodeWriter class.
-    public $reader;                  // An instance of the BinaryTreeNodeReader class.
-    public $logger;
-    public $log;
-    public $dataFolder;              //
+    public    $writer;                  // An instance of the BinaryTreeNodeWriter class.
+    public    $reader;                  // An instance of the BinaryTreeNodeReader class.
+    public    $logger;
+    public    $log;
+    public    $dataFolder;              //
 
     /**
      * Default class constructor.
@@ -219,19 +219,19 @@ class WhatsProt
       */
      public function disconnect()
      {
-         if (is_resource($this->socket)) {
-             @socket_shutdown($this->socket, 2);
-             @socket_close($this->socket);
-         }
-         $this->socket = null;
-         $this->loginStatus = Constants::DISCONNECTED_STATUS;
-         $this->logFile('info', 'Disconnected from WA server');
-         $this->eventManager()->fire('onDisconnect',
-             [
+          if (is_resource($this->socket)) {
+              @socket_shutdown($this->socket, 2);
+              @socket_close($this->socket);
+          }
+          $this->socket = null;
+          $this->loginStatus = Constants::DISCONNECTED_STATUS;
+          $this->logFile('info', 'Disconnected from WA server');
+          $this->eventManager()->fire('onDisconnect',
+              [
                  $this->phoneNumber,
                  $this->socket,
              ]
-         );
+          );
      }
 
     /**
@@ -331,19 +331,19 @@ class WhatsProt
 
     public function sendSetPreKeys($new = false)
     {
-        $axolotl = new KeyHelper();
+        $axolotl         = new KeyHelper();
 
         $identityKeyPair = $axolotl->generateIdentityKeyPair();
-        $privateKey = $identityKeyPair->getPrivateKey()->serialize();
-        $publicKey = $identityKeyPair->getPublicKey()->serialize();
-        $keys = $axolotl->generatePreKeys(mt_rand(), 200);
+        $privateKey      = $identityKeyPair->getPrivateKey()->serialize();
+        $publicKey       = $identityKeyPair->getPublicKey()->serialize();
+        $keys            = $axolotl->generatePreKeys(mt_rand(), 200);
         $this->axolotlStore->storePreKeys($keys);
 
         for ($i = 0; $i < 200; $i++) {
-            $prekeyId = adjustId($keys[$i]->getId());
-            $prekey = substr($keys[$i]->getKeyPair()->getPublicKey()->serialize(), 1);
-            $id = new ProtocolNode('id', null, null, $prekeyId);
-            $value = new ProtocolNode('value', null, null, $prekey);
+            $prekeyId  = adjustId($keys[$i]->getId());
+            $prekey    = substr($keys[$i]->getKeyPair()->getPublicKey()->serialize(), 1);
+            $id        = new ProtocolNode('id', null, null, $prekeyId);
+            $value     = new ProtocolNode('value', null, null, $prekey);
             $prekeys[] = new ProtocolNode('key', null, [$id, $value], null); // 200 PreKeys
         }
 
@@ -353,21 +353,21 @@ class WhatsProt
             $registrationId = $axolotl->generateRegistrationId();
         }
         $registration = new ProtocolNode('registration', null, null, adjustId($registrationId));
-        $identity = new ProtocolNode('identity', null, null, substr($publicKey, 1));
-        $type = new ProtocolNode('type', null, null, chr(Curve::DJB_TYPE));
+        $identity     = new ProtocolNode('identity', null, null, substr($publicKey, 1));
+        $type         = new ProtocolNode('type', null, null, chr(Curve::DJB_TYPE));
 
         $this->axolotlStore->storeLocalData($registrationId, $identityKeyPair);
 
-        $list = new ProtocolNode('list', null, $prekeys, null);
+        $list         = new ProtocolNode('list', null, $prekeys, null);
 
         $signedRecord = $axolotl->generateSignedPreKey($identityKeyPair, $axolotl->getRandomSequence(65536));
         $this->axolotlStore->storeSignedPreKey($signedRecord->getId(), $signedRecord);
 
-        $sid = new ProtocolNode('id', null, null, adjustId($signedRecord->getId()));
-        $value = new ProtocolNode('value', null, null, substr($signedRecord->getKeyPair()->getPublicKey()->serialize(), 1));
-        $signature = new ProtocolNode('signature', null, null, $signedRecord->getSignature());
+        $sid          = new ProtocolNode('id', null, null, adjustId($signedRecord->getId()));
+        $value        = new ProtocolNode('value', null, null, substr($signedRecord->getKeyPair()->getPublicKey()->serialize(), 1));
+        $signature    = new ProtocolNode('signature', null, null, $signedRecord->getSignature());
 
-        $secretKey = new ProtocolNode('skey', null, [$sid, $value, $signature], null);
+        $secretKey    = new ProtocolNode('skey', null, [$sid, $value, $signature], null);
 
         $iqId = $this->nodeId['sendcipherKeys'] = $this->createIqId();
         $iqNode = new ProtocolNode('iq',
@@ -394,14 +394,14 @@ class WhatsProt
         }
 
         $this->replaceKey = $replaceKey;
-        $msgId = $this->nodeId['cipherKeys'] = $this->createIqId();
+        $msgId            = $this->nodeId['cipherKeys'] = $this->createIqId();
 
-        $userNode = [];
+        $userNode         = [];
         foreach ($numbers as $number) {
             $userNode[] = new ProtocolNode('user',
-              [
+                [
                   'jid' => $this->getJID($number),
-              ], null, null);
+            ], null, null);
         }
         $keyNode = new ProtocolNode('key', null, $userNode, null);
         $node = new ProtocolNode('iq',
@@ -451,10 +451,12 @@ class WhatsProt
           'id'    => $id,
           't'     => $t,
         ], null, null);
+
         $registrationNode = new ProtocolNode('registration', null, null, adjustId($this->axolotlStore->getLocalRegistrationId()));
+
         if ($participant != null) { //isgroups
-        //group retry
-        $node = new ProtocolNode('receipt',
+            //group retry
+            $node = new ProtocolNode('receipt',
             [
                 'id'          => $id,
                 'to'          => $to,
@@ -470,6 +472,7 @@ class WhatsProt
                 'type' => 'retry',
                 't'    => $t,
             ], [$retryNode, $registrationNode], null);
+
             if (!isset($this->retryCounters[$id])) {
                 $this->retryCounters[$id] = 0;
             }
@@ -613,7 +616,7 @@ class WhatsProt
      */
     public function sendDeleteBroadcastLists($lists)
     {
-        $msgId = $this->createIqId();
+        $msgId    = $this->createIqId();
         $listNode = [];
         if ($lists != null && count($lists) > 0) {
             for ($i = 0; $i < count($lists); $i++) {
@@ -641,7 +644,7 @@ class WhatsProt
      */
     public function sendClearDirty($categories)
     {
-        $msgId = $this->createIqId();
+        $msgId    = $this->createIqId();
 
         $catnodes = [];
         foreach ($categories as $category) {
@@ -671,7 +674,7 @@ class WhatsProt
                 'type'  => 'set',
                 'xmlns' => 'urn:xmpp:whatsapp:push',
                 'to'    => Constants::WHATSAPP_SERVER,
-            ], [$child], null);
+        ], [$child], null);
 
         $this->sendNode($node);
     }
@@ -2409,8 +2412,8 @@ class WhatsProt
         $attributes['to'] = $from;
         $attributes['class'] = $class;
         $attributes['id'] = $id;
-    //  if ($node->getAttribute("id") != null)
-    //    $attributes["t"] = $node->getAttribute("t");
+        //  if ($node->getAttribute("id") != null)
+        //    $attributes["t"] = $node->getAttribute("t");
         if ($type != null) {
             $attributes['type'] = $type;
         }
@@ -2488,8 +2491,9 @@ class WhatsProt
      */
     public function processUploadResponse($node)
     {
-        $id = $node->getAttribute('id');
+        $id          = $node->getAttribute('id');
         $messageNode = @$this->mediaQueue[$id];
+
         if ($messageNode == null) {
             //message not found, can't send!
             $this->eventManager()->fire('onMediaUploadFailed',
@@ -2509,11 +2513,11 @@ class WhatsProt
             //file already on whatsapp servers
             $url = $duplicate->getAttribute('url');
             $filesize = $duplicate->getAttribute('size');
-//          $mimetype = $duplicate->getAttribute("mimetype");
+            // $mimetype = $duplicate->getAttribute("mimetype");
             $filehash = $duplicate->getAttribute('filehash');
             $filetype = $duplicate->getAttribute('type');
-//          $width = $duplicate->getAttribute("width");
-//          $height = $duplicate->getAttribute("height");
+            // $width = $duplicate->getAttribute("width");
+            // $height = $duplicate->getAttribute("height");
             $exploded = explode('/', $url);
             $filename = array_pop($exploded);
         } else {
@@ -2536,11 +2540,11 @@ class WhatsProt
 
             $url = $json->url;
             $filesize = $json->size;
-//          $mimetype = $json->mimetype;
+            // $mimetype = $json->mimetype;
             $filehash = $json->filehash;
             $filetype = $json->type;
-//          $width = $json->width;
-//          $height = $json->height;
+            // $width = $json->width;
+            // $height = $json->height;
             $filename = $json->name;
         }
 

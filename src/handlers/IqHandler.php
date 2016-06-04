@@ -18,8 +18,8 @@ class IqHandler implements Handler
 
     public function __construct(\WhatsProt $parent, \ProtocolNode $node)
     {
-        $this->node = $node;
-        $this->parent = $parent;
+        $this->node        = $node;
+        $this->parent      = $parent;
         $this->phoneNumber = $this->parent->getMyNumber();
     }
 
@@ -27,7 +27,7 @@ class IqHandler implements Handler
     {
         if ($this->node->getChild('query') != null) {
             if (isset($this->parent->getNodeId()['privacy']) && ($this->parent->getNodeId()['privacy'] == $this->node->getAttribute('id'))) {
-                $listChild = $this->node->getChild(0)->getChild(0);
+                $listChild   = $this->node->getChild(0)->getChild(0);
                 $blockedJids = [];
                 foreach ($listChild->getChildren() as $child) {
                     $blockedJids[] = $child->getAttribute('value');
@@ -42,33 +42,32 @@ class IqHandler implements Handler
             }
         }
 
-        if ($this->node->getAttribute('type') == 'get'
-    && $this->node->getAttribute('xmlns') == 'urn:xmpp:ping') {
+        if ($this->node->getAttribute('type') == 'get' && $this->node->getAttribute('xmlns') == 'urn:xmpp:ping') {
             $this->parent->eventManager()->fire('onPing',
-        [
-            $this->phoneNumber,
-            $this->node->getAttribute('id'),
-        ]);
+            [
+                $this->phoneNumber,
+                $this->node->getAttribute('id'),
+            ]);
             $this->parent->sendPong($this->node->getAttribute('id'));
         }
 
         if ($this->node->getChild('sync') != null) {
 
-    //sync result
-    $sync = $this->node->getChild('sync');
+            //sync result
+            $sync = $this->node->getChild('sync');
             $existing = $sync->getChild('in');
             $nonexisting = $sync->getChild('out');
 
-    //process existing first
-    $existingUsers = [];
+            //process existing first
+            $existingUsers = [];
             if (!empty($existing)) {
                 foreach ($existing->getChildren() as $child) {
                     $existingUsers[$child->getData()] = $child->getAttribute('jid');
                 }
             }
 
-    //now process failed numbers
-    $failedNumbers = [];
+            //now process failed numbers
+            $failedNumbers = [];
             if (!empty($nonexisting)) {
                 foreach ($nonexisting->getChildren() as $child) {
                     $failedNumbers[] = str_replace('+', '', $child->getData());
@@ -80,14 +79,14 @@ class IqHandler implements Handler
             $result = new SyncResult($index, $sync->getAttribute('sid'), $existingUsers, $failedNumbers);
 
             $this->parent->eventManager()->fire('onGetSyncResult',
-        [
-            $result,
-        ]);
+            [
+                $result,
+            ]);
         }
 
         if ($this->node->getChild('props') != null) {
             //server properties
-        $props = [];
+            $props = [];
             foreach ($this->node->getChild(0)->getChildren() as $child) {
                 $props[$child->getAttribute('name')] = $child->getAttribute('value');
             }
@@ -98,6 +97,7 @@ class IqHandler implements Handler
                 $props,
             ]);
         }
+
         if ($this->node->getChild('picture') != null) {
             $this->parent->eventManager()->fire('onGetProfilePicture',
             [
@@ -112,8 +112,8 @@ class IqHandler implements Handler
         }
         if (strpos($this->node->getAttribute('from'), Constants::WHATSAPP_GROUP_SERVER) !== false) {
             //There are multiple types of Group reponses. Also a valid group response can have NO children.
-        //Events fired depend on text in the ID field.
-        $groupList = [];
+            //Events fired depend on text in the ID field.
+            $groupList = [];
             $groupNodes = [];
             if ($this->node->getChild(0) != null && $this->node->getChild(0)->getChildren() != null) {
                 foreach ($this->node->getChild(0)->getChildren() as $child) {
@@ -143,12 +143,12 @@ class IqHandler implements Handler
                     $this->phoneNumber,
                     $groupList,
                 ]);
-            //getGroups returns a array of nodes which are exactly the same as from getGroupV2Info
-            //so lets call this event, we have all data at hand, no need to call getGroupV2Info for every
-            //group we are interested
-            foreach ($groupNodes as $groupNode) {
-                $this->handleGroupV2InfoResponse($groupNode, true);
-            }
+                //getGroups returns a array of nodes which are exactly the same as from getGroupV2Info
+                //so lets call this event, we have all data at hand, no need to call getGroupV2Info for every
+                //group we are interested
+                foreach ($groupNodes as $groupNode) {
+                    $this->handleGroupV2InfoResponse($groupNode, true);
+                }
             }
             if (isset($this->parent->getNodeId()['get_groupv2_info']) && ($this->parent->getNodeId()['get_groupv2_info'] == $this->node->getAttribute('id'))) {
                 $groupChild = $this->node->getChild(0);
@@ -164,10 +164,11 @@ class IqHandler implements Handler
                 foreach ($childArray as $list) {
                     if ($list->getChildren() != null) {
                         foreach ($list->getChildren() as $sublist) {
-                            $id = $sublist->getAttribute('id');
-                            $name = $sublist->getAttribute('name');
+                            $id                          = $sublist->getAttribute('id');
+                            $name                        = $sublist->getAttribute('name');
                             $broadcastLists[$id]['name'] = $name;
-                            $recipients = [];
+                            $recipients                  = [];
+
                             foreach ($sublist->getChildren() as $recipient) {
                                 array_push($recipients, $recipient->getAttribute('jid'));
                             }
@@ -210,19 +211,19 @@ class IqHandler implements Handler
             ]);
         }
         if ($this->node->getChild('status') != null) {
-            $child = $this->node->getChild('status');
+            $child  = $this->node->getChild('status');
             $childs = $child->getChildren();
             if (isset($childs) && !is_null($childs)) {
                 foreach ($childs as $status) {
                     $this->parent->eventManager()->fire('onGetStatus',
-                  [
+                    [
                       $this->phoneNumber,
                       $status->getAttribute('jid'),
                       'requested',
                       $this->node->getAttribute('id'),
                       $status->getAttribute('t'),
                       $status->getData(),
-                  ]);
+                    ]);
                 }
             }
         }
@@ -230,13 +231,16 @@ class IqHandler implements Handler
         if (($this->node->getAttribute('type') == 'error') && ($this->node->getChild('error') != null)) {
             $errorType = null;
             $this->parent->logFile('error', 'Iq error with {id} id', ['id' => $this->node->getAttribute('id')]);
+
             foreach ($this->parent->getNodeId() as $type => $nodeID) {
                 if ($nodeID == $this->node->getAttribute('id')) {
                     $errorType = $type;
                     break;
                 }
             }
+
             $nodeIds = $this->parent->getNodeId();
+
             if (isset($nodeIds['sendcipherKeys']) && (isset($nodeIds['sendcipherKeys'])  ==  $this->node->getAttribute('id'))  && $this->node->getChild('error')->getAttribute('code') == '406') {
                 $this->parent->sendSetPreKeys();
             } elseif ($this->node->getAttribute('id') == '2') {
@@ -256,17 +260,17 @@ class IqHandler implements Handler
         if (isset($this->parent->getNodeId()['cipherKeys']) && ($this->parent->getNodeId()['cipherKeys'] == $this->node->getAttribute('id'))) {
             $users = $this->node->getChild(0)->getChildren();
             foreach ($users as $user) {
-                $jid = $user->getAttribute('jid');
-                $registrationId = deAdjustId($user->getChild('registration')->getData());
-                $identityKey = new  IdentityKey(new DjbECPublicKey($user->getChild('identity')->getData()));
-                $signedPreKeyId = deAdjustId($user->getChild('skey')->getChild('id')->getData());
+                $jid             = $user->getAttribute('jid');
+                $registrationId  = deAdjustId($user->getChild('registration')->getData());
+                $identityKey     = new  IdentityKey(new DjbECPublicKey($user->getChild('identity')->getData()));
+                $signedPreKeyId  = deAdjustId($user->getChild('skey')->getChild('id')->getData());
                 $signedPreKeyPub = new DjbECPublicKey($user->getChild('skey')->getChild('value')->getData());
                 $signedPreKeySig = $user->getChild('skey')->getChild('signature')->getData();
-                $preKeyId = deAdjustId($user->getChild('key')->getChild('id')->getData());
-                $preKeyPublic = new DjbECPublicKey($user->getChild('key')->getChild('value')->getData());
+                $preKeyId        = deAdjustId($user->getChild('key')->getChild('id')->getData());
+                $preKeyPublic    = new DjbECPublicKey($user->getChild('key')->getChild('value')->getData());
 
-                $preKeyBundle = new PreKeyBundle($registrationId, 1, $preKeyId, $preKeyPublic, $signedPreKeyId, $signedPreKeyPub, $signedPreKeySig, $identityKey);
-                $sessionBuilder = new SessionBuilder($this->parent->getAxolotlStore(), $this->parent->getAxolotlStore(), $this->parent->getAxolotlStore(), $this->parent->getAxolotlStore(), ExtractNumber($jid), 1);
+                $preKeyBundle    = new PreKeyBundle($registrationId, 1, $preKeyId, $preKeyPublic, $signedPreKeyId, $signedPreKeyPub, $signedPreKeySig, $identityKey);
+                $sessionBuilder  = new SessionBuilder($this->parent->getAxolotlStore(), $this->parent->getAxolotlStore(), $this->parent->getAxolotlStore(), $this->parent->getAxolotlStore(), ExtractNumber($jid), 1);
 
                 $sessionBuilder->processPreKeyBundle($preKeyBundle);
                 if (isset($this->parent->getPendingNodes()[ExtractNumber($jid)])) {
@@ -281,28 +285,30 @@ class IqHandler implements Handler
         }
     }
 
-  /**
-   * @param ProtocolNode $groupNode
-   * @param mixed        $fromGetGroups
-   */
-  protected function handleGroupV2InfoResponse(ProtocolNode $groupNode, $fromGetGroups = false)
-  {
-      $creator = $groupNode->getAttribute('creator');
-      $creation = $groupNode->getAttribute('creation');
-      $subject = $groupNode->getAttribute('subject');
-      $groupID = $groupNode->getAttribute('id');
-      $participants = [];
-      $admins = [];
-      if ($groupNode->getChild(0) != null) {
-          foreach ($groupNode->getChildren() as $child) {
-              $participants[] = $child->getAttribute('jid');
-              if ($child->getAttribute('type') == 'admin') {
-                  $admins[] = $child->getAttribute('jid');
-              }
-          }
-      }
-      $this->parent->eventManager()->fire('onGetGroupV2Info',
-          [
+   /**
+    * @param ProtocolNode $groupNode
+    * @param mixed        $fromGetGroups
+    */
+   protected function handleGroupV2InfoResponse(ProtocolNode $groupNode, $fromGetGroups = false)
+   {
+        $creator      = $groupNode->getAttribute('creator');
+        $creation     = $groupNode->getAttribute('creation');
+        $subject      = $groupNode->getAttribute('subject');
+        $groupID      = $groupNode->getAttribute('id');
+        $participants = [];
+        $admins       = [];
+
+        if ($groupNode->getChild(0) != null) {
+            foreach ($groupNode->getChildren() as $child) {
+                $participants[] = $child->getAttribute('jid');
+                if ($child->getAttribute('type') == 'admin') {
+                    $admins[] = $child->getAttribute('jid');
+                }
+            }
+        }
+
+        $this->parent->eventManager()->fire('onGetGroupV2Info',
+        [
               $this->phoneNumber,
               $groupID,
               $creator,
@@ -311,9 +317,9 @@ class IqHandler implements Handler
               $participants,
               $admins,
               $fromGetGroups,
-          ]
+        ]
       );
-  }
+    }
 }
 
 class SyncResult
@@ -327,9 +333,9 @@ class SyncResult
 
     public function __construct($index, $syncId, $existing, $nonExisting)
     {
-        $this->index = $index;
-        $this->syncId = $syncId;
-        $this->existing = $existing;
+        $this->index       = $index;
+        $this->syncId      = $syncId;
+        $this->existing    = $existing;
         $this->nonExisting = $nonExisting;
     }
 }
